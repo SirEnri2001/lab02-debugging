@@ -1,19 +1,45 @@
 # lab02-debugging
 
-# Setup 
+[ShaderToy Link](https://www.shadertoy.com/view/3cXBWl)
 
-Create a [Shadertoy account](https://www.shadertoy.com/). Either fork this shadertoy, or create a new shadertoy and copy the code from the [Debugging Puzzle](https://www.shadertoy.com/view/flGfRc).
+# Bugs Resolved
 
-Let's practice debugging! We have a broken shader. It should produce output that looks like this:
-[Unbelievably beautiful shader](https://user-images.githubusercontent.com/1758825/200729570-8e10a37a-345d-4aff-8eff-6baf54a32a40.webm)
+**Shader Compile Error**
 
-It don't do that. Correct THREE of the FIVE bugs that are messing up the output. You are STRONGLY ENCOURAGED to work with a partner and pair program to force you to talk about your debugging thought process out loud.
+By compile logs, I corrected `vec` to `vec2`.
 
-Extra credit if you can find all FIVE bugs.
+**Wrong Aspect Ratio**
 
-# Submission
-- Create a pull request to this repository
-- In the README, include the names of both your team members
-- In the README, create a link to your shader toy solution with the bugs corrected
-- In the README, describe each bug you found and include a sentence about HOW you found it.
-- Make sure all three of your shadertoys are set to UNLISTED or PUBLIC (so we can see them!)
+I firstly wanted to solve the scene center issue, but I came across to raycast function and found out line 
+`H *= len * iResolution.x / iResolution.x;` seemed not right and I changed the latter x to y and the aspect ratio became normal.
+
+
+ **Centralize Scene**
+
+ I found out this by comparing the output image of uv2 and dir. I used `fragColor = vec4(uv2, 0., 1.);` and `fragColor = vec4(dir, 0., 1.);` to debug and found out dir did
+ not centered with 0 value. And I checked main function, found out uv was passed to raycast instead of uv2.
+
+ **Reflection Issue**
+
+ I firstly outputted material to the scene:
+ `return Intersection(t, material, isect, hitObj);`
+
+ ![](./2.png)
+
+ which I did not find any issue. Then I tried to substitude some variable in the if branch in sdf3D, e.g. using `if(true||hitObj==-1)` or drop fresnel term. At first I outputed the specReflCol in that way, and it seemed quite weird,
+ 
+ ![](./1.png)
+ 
+ Therefore I thought the normal was in wrong direction, since y axis pointed to the sky. Then I tested to output normal color, I even tried to modify computeNormal in Common file, and let the camera rotate to see anything occurred, but did not find any issue. Then I decided to check every function that sdf3D called after the first computeMaterial. the first one was, very fortunately, `reflect`. I googled that function and found out it was used incorrectly. Then I corrected that and reflection appeared. 
+
+ **Ray Marching Issue**
+
+ I got the hint that bug only existed in Image file, after I had done a lot of research on Common file. Given the issue seemed to mostly caused by march function I tweaked parameters in march. I firstly tweaked `m < 0.01` to smaller values, e.g. 0.0001, but the scene seemed worse which is strange. It curved out at a distance of the ground. 
+
+ ![](./3.png)
+
+ Then I noticed `t+=m`, then I tried with something like `t+=1.` and that gap between sphere and ground disappeared. 
+ 
+ ![](./4.png)
+ 
+ Then I realized it was the issue of t and it could not reach far enough so I tried to tweak `for(int i = 0; i < 64; ++i)` with higher values, and problem solved. 
